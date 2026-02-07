@@ -1,0 +1,15 @@
+FROM ubuntu:24.04 
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    postgresql-client-common \
+    python3-pip 
+    # curl \
+    # openssl  \
+    # libsasl2-modules \
+    # libssl-dev \
+    # libpq-dev
+
+RUN pip3 install awscli --break-system-packages
+COPY backup.sh /
+RUN chmod +x backup.sh
+ENTRYPOINT [ "sh /backup.sh" ]

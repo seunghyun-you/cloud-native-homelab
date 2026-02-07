@@ -45,7 +45,7 @@
 │  │   └──────────┬──────────┘      └──────────┬──────────┘                   │  │
 │  │              │                            │                               │  │
 │  │              └────────────┬───────────────┘                               │  │
-│  │                           │ VPN Tunnel (10.8.0.0/24)                      │  │
+│  │                           │ VPN Tunnel (192.168.200.0/24)                      │  │
 │  │                           │                                               │  │
 │  └───────────────────────────┼───────────────────────────────────────────────┘  │
 │                              │                                                   │
@@ -70,7 +70,7 @@
 │                              ▼                                                   │
 │  ┌───────────────────────────────────────────────────────────────────────────┐  │
 │  │   Mini PC (OpenVPN Client)                                                │  │
-│  │   VPN IP: 10.8.0.2                                                        │  │
+│  │   VPN IP: 192.168.200.2                                                        │  │
 │  │                                                                           │  │
 │  │   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐        │  │
 │  │   │ code-server │ │   ArgoCD    │ │   Jenkins   │ │   Nexus     │        │  │
@@ -155,8 +155,8 @@ OCI VM과 홈랩 Mini PC 간 암호화된 VPN 터널:
 
 | 구성 | 역할 | VPN IP |
 |------|------|--------|
-| OCI VM | OpenVPN Server | 10.8.0.1 |
-| Mini PC | OpenVPN Client | 10.8.0.2 |
+| OCI VM | OpenVPN Server | 192.168.200.1 |
+| Mini PC | OpenVPN Client | 192.168.200.2 |
 
 **보안 설정:**
 - OCI Security Group: UDP 1194만 허용
@@ -168,12 +168,12 @@ OCI VM과 홈랩 Mini PC 간 암호화된 VPN 터널:
 
 | 외부 접근 URL | 내부 서비스 | 용도 |
 |---------------|-------------|------|
-| `www.container-wave.com:443` | 10.8.0.2:80 | Sample Application |
-| `vscode.container-wave.com:443` | 10.8.0.2:8443 | Code Server (Web IDE) |
-| `cicd.container-wave.com:443` | 10.8.0.2:8080 | ArgoCD |
-| `cicd.container-wave.com:8080` | 10.8.0.2:8080 | Jenkins |
-| `cicd.container-wave.com:8081` | 10.8.0.2:8081 | Nexus Repository |
-| `mgmt.container-wave.com:443` | 10.8.0.2:3000 | Grafana |
+| `www.container-wave.com:443` | 192.168.200.2:80 | Sample Application |
+| `vscode.container-wave.com:443` | 192.168.200.2:8443 | Code Server (Web IDE) |
+| `cicd.container-wave.com:443` | 192.168.200.2:8080 | ArgoCD |
+| `cicd.container-wave.com:8080` | 192.168.200.2:8080 | Jenkins |
+| `cicd.container-wave.com:8081` | 192.168.200.2:8081 | Nexus Repository |
+| `mgmt.container-wave.com:443` | 192.168.200.2:3000 | Grafana |
 
 ## 보안 설계
 
@@ -239,10 +239,10 @@ OCI VM과 홈랩 Mini PC 간 암호화된 VPN 터널:
 2.       └─► DNS → OCI Public IP
                    │
 3.                 └─► OCI Nginx (SSL Termination)
-                       │ proxy_pass http://10.8.0.2:3000
+                       │ proxy_pass http://192.168.200.2:3000
 4.                     └─► VPN Tunnel
                            │
-5.                         └─► Mini PC (10.8.0.2)
+5.                         └─► Mini PC (192.168.200.2)
                                │
 6.                             └─► Grafana (:3000)
                                    │

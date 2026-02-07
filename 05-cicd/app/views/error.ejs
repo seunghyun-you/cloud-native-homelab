@@ -1,0 +1,29 @@
+<!-- views/error.ejs -->
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Error</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 20px;
+            }
+            .error {
+                color: red;
+                background-color: #ffeeee;
+                padding: 15px;
+                border-radius: 5px;
+                border: 1px solid #ffcccc;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>Sample application</h2>
+        <h3>Hostname: <%= hostname %></h3>
+        <div class="error">
+            <h3>Database connection failed!</h3>
+            <p>Error: <%= error %></p>
+            <p>Please try again later</p>
+        </div>
+    </body>
+</html>
