@@ -50,14 +50,14 @@ openvpn/
 
 ## 네트워크 구성
 
-| 항목 | 값 |
-|------|-----|
+| 항목       | 값               |
+| ---------- | ---------------- |
 | VPN Subnet | 192.168.200.0/24 |
-| Server IP | 192.168.200.1 |
-| Client IP | 192.168.200.2 |
-| Protocol | UDP |
-| Port | 1194 |
-| Cipher | AES-256-GCM |
+| Server IP  | 192.168.200.1    |
+| Client IP  | 192.168.200.2    |
+| Protocol   | UDP              |
+| Port       | 1194             |
+| Cipher     | AES-256-GCM      |
 
 ## 설정 파일 설명
 
@@ -191,9 +191,9 @@ sudo systemctl start openvpn-client@client
 
 ### OCI Security List
 
-| Direction | Protocol | Port | Source |
-|-----------|----------|------|--------|
-| Ingress | UDP | 1194 | 0.0.0.0/0 |
+| Direction | Protocol | Port | Source    |
+| --------- | -------- | ---- | --------- |
+| Ingress   | UDP      | 1194 | 0.0.0.0/0 |
 
 ### OCI VM (iptables)
 

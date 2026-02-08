@@ -39,15 +39,15 @@ nginx/
 
 서브도메인 및 포트별 server 블록 구성:
 
-| Server Block | Listen | Server Name | Proxy Pass |
-|--------------|--------|-------------|------------|
-| HTTP → HTTPS | 80 | _ (all) | 301 redirect |
-| Code Server | 443 | vscode.container-wave.com | 192.168.200.2:8080 |
-| Sample App | 443 | www.container-wave.com | 192.168.200.2:9000 |
-| ArgoCD | 443 | cicd.container-wave.com | 192.168.200.2:8443 |
-| Jenkins | 8080 | cicd.container-wave.com | 192.168.200.2:18080 |
-| Nexus | 8081 | cicd.container-wave.com | 192.168.200.2:18081 |
-| Grafana | 443 | mgmt.container-wave.com | 192.168.200.2:80 |
+| Server Block | Listen | Server Name               | Proxy Pass          |
+| ------------ | ------ | ------------------------- | ------------------- |
+| HTTP → HTTPS | 80     | _ (all)                   | 301 redirect        |
+| Code Server  | 443    | vscode.container-wave.com | 192.168.200.2:8080  |
+| Sample App   | 443    | www.container-wave.com    | 192.168.200.2:9000  |
+| ArgoCD       | 443    | cicd.container-wave.com   | 192.168.200.2:8443  |
+| Jenkins      | 8080   | cicd.container-wave.com   | 192.168.200.2:18080 |
+| Nexus        | 8081   | cicd.container-wave.com   | 192.168.200.2:18081 |
+| Grafana      | 443    | mgmt.container-wave.com   | 192.168.200.2:80    |
 
 ### 주요 설정 항목
 
@@ -148,12 +148,12 @@ sudo crontab -e
 
 OCI Security List / Security Group:
 
-| Direction | Protocol | Port | Source |
-|-----------|----------|------|--------|
-| Ingress | TCP | 80 | 0.0.0.0/0 |
-| Ingress | TCP | 443 | 0.0.0.0/0 |
-| Ingress | TCP | 8080 | 0.0.0.0/0 |
-| Ingress | TCP | 8081 | 0.0.0.0/0 |
+| Direction | Protocol | Port | Source    |
+| --------- | -------- | ---- | --------- |
+| Ingress   | TCP      | 80   | 0.0.0.0/0 |
+| Ingress   | TCP      | 443  | 0.0.0.0/0 |
+| Ingress   | TCP      | 8080 | 0.0.0.0/0 |
+| Ingress   | TCP      | 8081 | 0.0.0.0/0 |
 
 ## 트러블슈팅
 

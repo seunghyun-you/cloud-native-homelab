@@ -66,14 +66,14 @@ OCI(Oracle Cloud Infrastructure)를 활용한 외부 접근 게이트웨이와 �
 
 ## 서비스 라우팅
 
-| 외부 URL | 내부 주소 | 서비스 |
-|----------|-----------|--------|
-| `https://vscode.container-wave.com` | 192.168.200.2:8080 | Code Server (Web IDE) |
-| `https://www.container-wave.com` | 192.168.200.2:9000 | Sample Application |
-| `https://cicd.container-wave.com` | 192.168.200.2:8443 | ArgoCD |
-| `https://cicd.container-wave.com:8080` | 192.168.200.2:18080 | Jenkins |
-| `https://cicd.container-wave.com:8081` | 192.168.200.2:18081 | Nexus |
-| `https://mgmt.container-wave.com` | 192.168.200.2:80 | Grafana |
+| 외부 URL                               | 내부 주소           | 서비스                |
+| -------------------------------------- | ------------------- | --------------------- |
+| `https://vscode.container-wave.com`    | 192.168.200.2:8080  | Code Server (Web IDE) |
+| `https://www.container-wave.com`       | 192.168.200.2:9000  | Sample Application    |
+| `https://cicd.container-wave.com`      | 192.168.200.2:8443  | ArgoCD                |
+| `https://cicd.container-wave.com:8080` | 192.168.200.2:18080 | Jenkins               |
+| `https://cicd.container-wave.com:8081` | 192.168.200.2:18081 | Nexus                 |
+| `https://mgmt.container-wave.com`      | 192.168.200.2:80    | Grafana               |
 
 ## 구성 요소
 
@@ -89,12 +89,12 @@ OCI(Oracle Cloud Infrastructure)를 활용한 외부 접근 게이트웨이와 �
 
 ## 사용된 기술
 
-| 기술 | 용도 | 버전 |
-|------|------|------|
-| Nginx | Reverse Proxy | 1.18+ |
-| Let's Encrypt | SSL/TLS 인증서 | - |
-| Certbot | 인증서 자동 갱신 | - |
-| OpenVPN | VPN 터널링 | 2.6 |
+| 기술          | 용도             | 버전  |
+| ------------- | ---------------- | ----- |
+| Nginx         | Reverse Proxy    | 1.18+ |
+| Let's Encrypt | SSL/TLS 인증서   | -     |
+| Certbot       | 인증서 자동 갱신 | -     |
+| OpenVPN       | VPN 터널링       | 2.6   |
 
 ## 관련 블로그 포스트
 
