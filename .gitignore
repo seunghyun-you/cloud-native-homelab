@@ -1,0 +1,36 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment / Secrets
+.env
+.env.*
+*.pem
+*.key
+*.crt
+!*.key.example
+!*.crt.example
+
+# Vagrant
+.vagrant/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Logs
+*.log
+
+# Claude
+CLAUDE.md
+
+# Backup files
+*.bak
+*.backup

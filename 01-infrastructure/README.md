@@ -1,13 +1,12 @@
 # 01. Infrastructure
 
-미니 PC를 활용한 홈랩 인프라 기반 환경을 구성합니다.
-
-## 개요
-
 단일 미니 PC에서 Vagrant + VirtualBox를 활용하여 프로덕션 환경과 유사한 멀티 노드 클러스터를 구현했습니다.
 OCI(Oracle Cloud Infrastructure)를 활용한 하이브리드 구성으로 외부에서 안전하게 접근할 수 있습니다.
 
 ## 전체 아키텍처 (Hybrid)
+
+![alt text](../00-images/infrastructure-architecture.png)
+
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -95,17 +94,17 @@ OCI(Oracle Cloud Infrastructure)를 활용한 하이브리드 구성으로 외�
 
 ## 리소스 할당
 
-| 노드 | 역할 | vCPU | Memory | Storage | Network |
-|------|------|------|--------|---------|---------|
-| cilium-ctr | K8s Control Plane | 2 | 4GB | - | 192.168.10.100 |
-| cilium-w1 | K8s Worker | 2 | 4GB | - | 192.168.10.101 |
-| cilium-w2 | K8s Worker | 2 | 4GB | - | 192.168.10.102 |
-| cilium-w3 | K8s Worker (Subnet2) | 2 | 4GB | - | 192.168.20.100 |
-| cilium-r | Router | 1 | 1GB | - | .10.200 / .20.200 |
-| ceph-01 | Ceph OSD | 2 | 4GB | 100GB | 192.168.50.201 |
-| ceph-02 | Ceph OSD | 2 | 4GB | 100GB | 192.168.50.202 |
-| ceph-03 | Ceph OSD | 2 | 4GB | 100GB | 192.168.50.203 |
-| **합계** | | **15** | **29GB** | **300GB** | |
+| 노드       | 역할                 | vCPU   | Memory   | Storage   | Network                         |
+| ---------- | -------------------- | ------ | -------- | --------- | ------------------------------- |
+| cilium-ctr | K8s Control Plane    | 2      | 4GB      | 50GB      | 192.168.10.100                  |
+| cilium-w1  | K8s Worker           | 2      | 4GB      | 50GB      | 192.168.10.101                  |
+| cilium-w2  | K8s Worker           | 2      | 4GB      | 50GB      | 192.168.10.102                  |
+| cilium-w3  | K8s Worker (Subnet2) | 2      | 4GB      | 50GB      | 192.168.20.100                  |
+| cilium-r   | Router               | 1      | 1GB      | 50GB      | 192.168.10.200 / 192.168.20.200 |
+| ceph-01    | Ceph OSD             | 2      | 4GB      | 100GB     | 192.168.50.201                  |
+| ceph-02    | Ceph OSD             | 2      | 4GB      | 100GB     | 192.168.50.202                  |
+| ceph-03    | Ceph OSD             | 2      | 4GB      | 100GB     | 192.168.50.203                  |
+| **합계**   |                      | **15** | **29GB** | **300GB** |                                 |
 
 ## 핵심 설계 포인트
 
@@ -129,14 +128,14 @@ OCI(Oracle Cloud Infrastructure)를 활용한 하이브리드 구성으로 외�
 
 ## 외부 서비스 접근
 
-| 서비스 | URL | 용도 |
-|--------|-----|------|
-| Sample App | https://www.container-wave.com | 샘플 애플리케이션 |
-| Code Server | https://vscode.container-wave.com | Web IDE |
-| ArgoCD | https://cicd.container-wave.com | GitOps 대시보드 |
-| Jenkins | https://cicd.container-wave.com:8080 | CI 파이프라인 |
-| Nexus | https://cicd.container-wave.com:8081 | Artifact Repository |
-| Grafana | https://mgmt.container-wave.com | 모니터링 대시보드 |
+| 서비스      | URL                                  | 용도                |
+| ----------- | ------------------------------------ | ------------------- |
+| Sample App  | https://www.container-wave.com       | 샘플 애플리케이션   |
+| Code Server | https://vscode.container-wave.com    | Web IDE             |
+| ArgoCD      | https://cicd.container-wave.com      | GitOps 대시보드     |
+| Jenkins     | https://cicd.container-wave.com:8080 | CI 파이프라인       |
+| Nexus       | https://cicd.container-wave.com:8081 | Artifact Repository |
+| Grafana     | https://mgmt.container-wave.com      | 모니터링 대시보드   |
 
 ## 문서 구성
 
