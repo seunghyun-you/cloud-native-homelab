@@ -1,11 +1,13 @@
 # 01. Infrastructure
 
-단일 미니 PC에서 Vagrant + VirtualBox를 활용하여 프로덕션 환경과 유사한 멀티 노드 클러스터를 구현했습니다.
-OCI(Oracle Cloud Infrastructure)를 활용한 하이브리드 구성으로 외부에서 안전하게 접근할 수 있습니다.
+단일 Mini PC에 Vagrant + VirtualBox 이용 Cloud Native 환경 구축.
+OCI(Oracle Cloud Infrastructure)와 Home Lab 환경을 VPN으로 연동하여 하이브리드 구성.
+OCI VM을 Reverse Proxy로 활용해 외부에서 안전하게 Home Lab 환경에 접근할 수 있도록 구성.
 
 ## 전체 아키텍처 (Hybrid)
 
 ![alt text](../00-images/infrastructure-architecture.png)
+
 
 ## 리소스 스펙
 
@@ -23,20 +25,120 @@ BEELINK SER8 (베어본) Mini PC 사양 정보
 
 ### 2. Virtual Machine
 
-| 노드       | 역할              | vCPU   | Memory   | Storage   |
-| ---------- | ----------------- | ------ | -------- | --------- |
-| oracle-vm  | Reverse Proxy     | 1      | 1GB      | 50GB      |
-| cilium-ctr | K8s Control Plane | 2      | 4GB      | 50GB      |
-| cilium-w1  | K8s Worker Node   | 2      | 4GB      | 50GB      |
-| cilium-w2  | K8s Worker Node   | 2      | 4GB      | 50GB      |
-| cilium-w3  | K8s Worker Node   | 2      | 4GB      | 50GB      |
-| cilium-r   | Router            | 1      | 1GB      | 50GB      |
-| ceph-01    | Ceph OSD          | 2      | 4GB      | 100GB     |
-| ceph-02    | Ceph OSD          | 2      | 4GB      | 100GB     |
-| ceph-03    | Ceph OSD          | 2      | 4GB      | 100GB     |
-| **합계**   |                   | **15** | **29GB** | **300GB** |
+OCI VM(Free Tier)와 VirtualBox에 구성된 VM 사양 정보
+
+| 노드       | 역할                      | vCPU   | Memory   | Storage   | OS               |
+| ---------- | ------------------------- | ------ | -------- | --------- | ---------------- |
+| oracle-vm  | Reverse Proxy             | 1      | 1GB      | 50GB      | Ubuntu 24.04 LTS |
+| cilium-ctr | K8s Control Plane         | 2      | 4GB      | 50GB      | Ubuntu 24.04 LTS |
+| cilium-w1  | K8s Worker Node           | 2      | 4GB      | 50GB      | Ubuntu 24.04 LTS |
+| cilium-w2  | K8s Worker Node           | 2      | 4GB      | 50GB      | Ubuntu 24.04 LTS |
+| cilium-w3  | K8s Worker Node           | 2      | 4GB      | 50GB      | Ubuntu 24.04 LTS |
+| cilium-r   | Router                    | 1      | 1GB      | 50GB      | Ubuntu 24.04 LTS |
+| ceph-01    | Ceph OSD                  | 2      | 4GB      | 100GB     | Ubuntu 24.04 LTS |
+| ceph-02    | Ceph OSD                  | 2      | 4GB      | 100GB     | Ubuntu 24.04 LTS |
+| ceph-03    | Ceph OSD                  | 2      | 4GB      | 100GB     | Ubuntu 24.04 LTS |
+| build      | Private Registry, Jenkins | 1      | 2GB      | 50GB      | Ubuntu 24.04 LTS |
+| **합계**   |                           | **16** | **31GB** | **650GB** |                  |
+
+## 상세 설계 및 구현 현황
+
+### 1. Hybrid Architecture (OCI + Home Lab)
+
+#### 1.1 목적
+
+어디서든 접근 가능하면서도 안전한 Home Lab 환경 구축
+
+#### 1.2 배경 및 문제점
+
+가정용 공유기(ipTIME)에서 직접 포트를 오픈할 경우 발생 가능한 보안상 문제점
+
+- **보안 위험**: 홈 네트워크가 인터넷에 직접 노출되어 DDoS, 무차별 대입 공격 등에 취약
+- **제한적인 보안 설정**: 가정용 공유기의 방화벽/ACL 기능으로는 세밀한 접근 제어가 어려움
+- **HTTPS 적용 불가**: ipTIME 동적 도메인(*.iptime.org)에는 SSL 인증서 발급 및 적용 불가
+- **외부 접근 필요성**: 회사, 카페 등 외부에서 홈랩의 IDE, CI/CD, 모니터링 도구에 접근해야 함
+
+#### 1.3 해결 방안
+
+**Oracle Cloud 무료 VM을 Reverse Proxy로 활용한 안전한 외부 접근 환경 구성**
+
+- 가비아에서 구입한 도메인(container-waver.com)을 OCI VM Public IP에 연결
+- OpenVPN Client-to-Site 구성으로 홈 네트워크와 OCI VM 간 암호화된 VPN 터널 구축
+- Let's Encrypt 인증서를 적용하여 모든 통신 HTTPS 암호화 (+인증서 갱신 자동화 스크립트 적용)
+- Oracle Cloud 무료 티어를 활용하여 추가 비용 없이 구축
+
+#### 1.4 외부 접근 플로우 
+
+![alt text](../00-images/external-access-flow.png)
+
+#### 1.5 구현 상세 관련 블로그 포스트
+
+- [OpenVPN Configuration](./openvpn/README.md)
+- [Let's Encrypt 무료 인증서 생성 및 HTTPS 적용](https://engineer-diarybook.tistory.com/entry/Nginx-Lets-Encryption-%EB%AC%B4%EB%A3%8C-%EC%9D%B8%EC%A6%9D%EC%84%9C-%EC%83%9D%EC%84%B1-%EB%B0%8F-HTTPS-%EC%A0%81%EC%9A%A9)
+
+
+### 2. Service Routing (Nginx Reverse Proxy)
+
+#### 2.1 목적
+
+OCI VM의 Nginx를 통해 외부 요청을 단일 엔드포인트로 Home Lab 서비스 통합
+
+#### 2.2 배경 및 문제점
+
+VPN 터널을 통해 OCI VM과 HomeLab이 연결되었지만, 다수의 내부 서비스에 대한 접근 방식이 필요
+
+- **다수의 서비스 존재**: Code Server, ArgoCD, Jenkins, Nexus, Grafana 등 서로 다른 포트와 IP에 분산
+- **포트 기반 접근의 한계**: IP:Port 방식은 직관적이지 않고, 서비스 추가 시마다 포트 관리 복잡도 증가
+- **SSL 인증서 관리**: 각 서비스별로 개별 인증서를 적용하면 관리 부담이 크게 증가
+- **접근 제어 부재**: 서비스별 통합된 접근 제어 및 로깅 포인트가 없음
+
+#### 2.3 해결 방안
+
+**Nginx Reverse Proxy + 서브도메인 기반 라우팅으로 단일 진입점 구성**
+
+- 서브도메인(vscode.*, cicd.*, mgmt.*, www.*)별로 내부 서비스에 라우팅하여 직관적인 접근 제공
+- Let's Encrypt Wildcard 인증서(*.container-wave.com)로 SSL Termination을 Nginx에서 일괄 처리
+- VPN 터널(OpenVPN)을 통해 HomeLab 내부 서비스로 트래픽 전달 (외부 직접 노출 없음)
+- Nginx 단일 진입점에서 접근 로그 및 보안 설정을 중앙 관리
+
+#### 2.4 Network Flow
+
+```
+External Request                    OCI VM (Nginx)                     HomeLab
+─────────────────                  ─────────────────                  ─────────────
+
+https://vscode.*:443  ──────────►  SSL Termination  ──────────────►  :8080 (code-server)
+https://www.*:443     ──────────►  + Reverse Proxy  ──────────────►  :9000 (Ingress)
+https://cicd.*:443    ──────────►       │           ──────────────►  :8443 (ArgoCD)
+https://cicd.*:8080   ──────────►       │           ──────────────►  :18080 (Jenkins)
+https://cicd.*:8081   ──────────►       │           ──────────────►  :18081 (Nexus)
+https://mgmt.*:443    ──────────►       │           ──────────────►  :80 (Grafana)
+                                        │
+                                   Let's Encrypt
+                                   Wildcard Cert
+                                   *.container-wave.com
+```
+
+| 외부 URL                               | 내부 주소           | 서비스                |
+| -------------------------------------- | ------------------- | --------------------- |
+| `https://vscode.container-wave.com`    | 192.168.200.2:8080  | Code Server (Web IDE) |
+| `https://www.container-wave.com`       | 192.168.200.2:9000  | Sample Application    |
+| `https://cicd.container-wave.com`      | 192.168.200.2:8443  | ArgoCD                |
+| `https://cicd.container-wave.com:8080` | 192.168.200.2:18080 | Jenkins               |
+| `https://cicd.container-wave.com:8081` | 192.168.200.2:18081 | Nexus                 |
+| `https://mgmt.container-wave.com`      | 192.168.200.2:80    | Grafana               |
+
+
+#### 2.5 구현 상세 관련 블로그 포스트
+
+- [Nginx Reverse Proxy 설정](https://engineer-diarybook.tistory.com/entry/Nginx-Reverse-Proxy-%EC%84%A4%EC%A0%95-1)
+
+
+
+
 
 ## 핵심 설계 포인트
+
 
 ### 1. 하이브리드 아키텍처 (On-Premise + Cloud)
 - OCI Free Tier를 활용한 외부 접근 게이트웨이
@@ -74,13 +176,6 @@ BEELINK SER8 (베어본) Mini PC 사양 정보
 - [external-access.md](./external-access.md) - 외부 접근 아키텍처 (OCI + VPN)
 - [vagrant/README.md](./vagrant/README.md) - Vagrant 프로비저닝 가이드
 
-## 사용된 기술
 
-- **가상화**: VirtualBox 7.x
-- **프로비저닝**: Vagrant
-- **Base Image**: bento/ubuntu-24.04
-- **Container Runtime**: containerd 1.7.27
-- **Cloud**: Oracle Cloud Infrastructure (OCI) Free Tier
-- **VPN**: OpenVPN
-- **Reverse Proxy**: Nginx
-- **SSL/TLS**: Let's Encrypt (Certbot)
+
+- [Private Container Image Registry (Nexus) 구축](https://engineer-diarybook.tistory.com/entry/Docker-Container-Image-Registry-%EA%B5%AC%EC%B6%95-Nexus)

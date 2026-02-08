@@ -1,6 +1,6 @@
 # Home Lab 인프라 구축
 
-Cloud Native 기술 스택 검증을 위한 하이브리드 Home Lab 인프라 구축.
+Cloud Native 기술 스택 구현 및 기능 검증을 위한 하이브리드 Home Lab 인프라 구축 기술 문서.
 (Kubernetes 기반 컨테이너 오케스트레이션, 분산 스토리지, GitOps CI/CD Pipeline, 모니터링 스택을 포함)
 
 ## 아키텍처 개요
@@ -9,15 +9,15 @@ Cloud Native 기술 스택 검증을 위한 하이브리드 Home Lab 인프라 �
 
 ## 기술 스택
 
-| 영역                | 기술                                                   |
-| ------------------- | ------------------------------------------------------ |
-| **Orchestration**   | Kubernetes · Docker · Cilium CNI · NetApp/Ceph/NFS CSI |
-| **Virtualization**  | Vagrant · VirtualBox                                   |
-| **Storage**         | Ceph Cluster(cephadm) · Ubuntu NAS Server              |
-| **Network**         | OpenVPN                                                |
-| **GitOps Pipeline** | ArgoCD · Jenkins                                       |
-| **Registry**        | Nexus · GitHub                                         |
-| **Observability**   | Prometheus · Grafana                                   |
+| 영역                | 기술                                                       |
+| ------------------- | ---------------------------------------------------------- |
+| **Orchestration**   | Kubernetes · containerd · Cilium CNI · NetApp/Ceph/NFS CSI |
+| **Virtualization**  | Vagrant · VirtualBox                                       |
+| **Storage**         | Ceph Cluster(cephadm) · Ubuntu NAS Server                  |
+| **Network**         | OpenVPN                                                    |
+| **GitOps Pipeline** | ArgoCD · Jenkins                                           |
+| **Registry**        | Nexus · GitHub                                             |
+| **Observability**   | Prometheus · Grafana                                       |
 
 ## 프로젝트 구성
 
