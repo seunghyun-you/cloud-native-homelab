@@ -41,6 +41,65 @@ OCI VM(Free Tier)와 VirtualBox에 구성된 VM 사양 정보
 | build      | Private Registry, Jenkins | 1      | 2GB      | 50GB      | Ubuntu 24.04 LTS |
 | **합계**   |                           | **16** | **31GB** | **650GB** |                  |
 
+## 서브넷 상세
+
+### Kubernetes 네트워크
+
+| 네트워크     | CIDR            | 용도               | 노드                |
+| ------------ | --------------- | ------------------ | ------------------- |
+| Subnet1      | 192.168.10.0/24 | K8s Primary        | ctr, w1, w2, router |
+| Subnet2      | 192.168.20.0/24 | K8s Secondary      | w3, router          |
+| Pod CIDR     | 172.20.0.0/16   | Cilium Pod Network | All K8s nodes       |
+| Service CIDR | 10.96.0.0/16    | K8s Service        | All K8s nodes       |
+
+### Ceph Storage 네트워크
+
+| 네트워크 | CIDR            | 용도                    |
+| -------- | --------------- | ----------------------- |
+| Public   | 192.168.50.0/24 | 클라이언트 → OSD 접근   |
+| Cluster  | 192.168.60.0/24 | OSD 간 복제/복구 트래픽 |
+
+### 가상 네트워크 (Router)
+
+| 인터페이스 | IP             | 용도                       |
+| ---------- | -------------- | -------------------------- |
+| loop1      | 10.10.1.200/24 | Dummy interface (테스트용) |
+| loop2      | 10.10.2.200/24 | Dummy interface (테스트용) |
+
+## 라우팅 구성
+
+### Router 노드 (cilium-r)
+
+```bash
+# IP Forwarding 활성화
+net.ipv4.ip_forward = 1
+```
+
+Router 노드는 두 서브넷을 연결하며, 각 서브넷의 노드들은 Router를 통해 통신
+
+### Subnet1 노드 라우팅 테이블
+
+```bash
+# net-setting-01.sh 적용 결과
+ip route show
+
+192.168.20.0/24 via 192.168.10.200  # Subnet2 → Router 경유
+172.20.0.0/16   via 192.168.10.200  # Pod CIDR → Router 경유
+10.10.0.0/16    via 192.168.10.200  # Dummy Network → Router 경유
+```
+
+### Subnet2 노드 라우팅 테이블
+
+```bash
+# net-setting-02.sh 적용 결과
+ip route show
+
+192.168.10.0/24 via 192.168.20.200  # Subnet1 → Router 경유
+172.20.0.0/16   via 192.168.20.200  # Pod CIDR → Router 경유
+10.10.0.0/16    via 192.168.20.200  # Dummy Network → Router 경유
+```
+
+
 ## 상세 설계 및 구현 현황
 
 ### 1. Hybrid Architecture (OCI + Home Lab)
@@ -62,9 +121,9 @@ OCI VM(Free Tier)와 VirtualBox에 구성된 VM 사양 정보
 
 **Oracle Cloud 무료 VM을 Reverse Proxy로 활용한 안전한 외부 접근 환경 구성**
 
-- 가비아에서 구입한 도메인(container-waver.com)을 OCI VM Public IP에 연결
+- 가비아에서 구입한 도메인(container-wave.com)을 OCI VM Public IP에 연결
 - OpenVPN Client-to-Site 구성으로 홈 네트워크와 OCI VM 간 암호화된 VPN 터널 구축
-- Let's Encrypt 인증서를 적용하여 모든 통신 HTTPS 암호화 (+인증서 갱신 자동화 스크립트 적용)
+- Let's Encrypt 인증서를 적용하여 모든 통신 HTTPS 암호화 (+[인증서 갱신 자동화 스크립트 적용](./script/certrenew.sh))
 - Oracle Cloud 무료 티어를 활용하여 추가 비용 없이 구축
 
 #### 1.4 외부 접근 플로우 
@@ -73,7 +132,7 @@ OCI VM(Free Tier)와 VirtualBox에 구성된 VM 사양 정보
 
 #### 1.5 구현 상세 관련 블로그 포스트
 
-- [OpenVPN Configuration](./openvpn/README.md)
+- [OpenVPN Client-to-Site Configuration](./openvpn/README.md)
 - [Let's Encrypt 무료 인증서 생성 및 HTTPS 적용](https://engineer-diarybook.tistory.com/entry/Nginx-Lets-Encryption-%EB%AC%B4%EB%A3%8C-%EC%9D%B8%EC%A6%9D%EC%84%9C-%EC%83%9D%EC%84%B1-%EB%B0%8F-HTTPS-%EC%A0%81%EC%9A%A9)
 
 
@@ -81,43 +140,20 @@ OCI VM(Free Tier)와 VirtualBox에 구성된 VM 사양 정보
 
 #### 2.1 목적
 
-OCI VM의 Nginx를 통해 외부 요청을 단일 엔드포인트로 Home Lab 서비스 통합
+OCI VM의 Nginx를 통해 외부 요청을 단일 엔드포인트로 Home Lab 내부의 다수 서비스 접근 통합 관리
 
-#### 2.2 배경 및 문제점
-
-VPN 터널을 통해 OCI VM과 HomeLab이 연결되었지만, 다수의 내부 서비스에 대한 접근 방식이 필요
-
-- **다수의 서비스 존재**: Code Server, ArgoCD, Jenkins, Nexus, Grafana 등 서로 다른 포트와 IP에 분산
-- **포트 기반 접근의 한계**: IP:Port 방식은 직관적이지 않고, 서비스 추가 시마다 포트 관리 복잡도 증가
-- **SSL 인증서 관리**: 각 서비스별로 개별 인증서를 적용하면 관리 부담이 크게 증가
-- **접근 제어 부재**: 서비스별 통합된 접근 제어 및 로깅 포인트가 없음
-
-#### 2.3 해결 방안
+#### 2.2 해결 방안
 
 **Nginx Reverse Proxy + 서브도메인 기반 라우팅으로 단일 진입점 구성**
 
-- 서브도메인(vscode.*, cicd.*, mgmt.*, www.*)별로 내부 서비스에 라우팅하여 직관적인 접근 제공
+- 서브도메인(vscode.*, cicd.*, mgmt.*, www.*)별로 내부 서비스에 라우팅하여 접근
 - Let's Encrypt Wildcard 인증서(*.container-wave.com)로 SSL Termination을 Nginx에서 일괄 처리
-- VPN 터널(OpenVPN)을 통해 HomeLab 내부 서비스로 트래픽 전달 (외부 직접 노출 없음)
+- 외부의 직접적인 노출 없이 VPN 터널(OpenVPN)을 통해 HomeLab 내부 서비스로 트래픽 전달
 - Nginx 단일 진입점에서 접근 로그 및 보안 설정을 중앙 관리
 
-#### 2.4 Network Flow
+#### 2.3 Network Flow
 
-```
-External Request                    OCI VM (Nginx)                     HomeLab
-─────────────────                  ─────────────────                  ─────────────
-
-https://vscode.*:443  ──────────►  SSL Termination  ──────────────►  :8080 (code-server)
-https://www.*:443     ──────────►  + Reverse Proxy  ──────────────►  :9000 (Ingress)
-https://cicd.*:443    ──────────►       │           ──────────────►  :8443 (ArgoCD)
-https://cicd.*:8080   ──────────►       │           ──────────────►  :18080 (Jenkins)
-https://cicd.*:8081   ──────────►       │           ──────────────►  :18081 (Nexus)
-https://mgmt.*:443    ──────────►       │           ──────────────►  :80 (Grafana)
-                                        │
-                                   Let's Encrypt
-                                   Wildcard Cert
-                                   *.container-wave.com
-```
+![alt text](../00-images/network-flow.png)
 
 | 외부 URL                               | 내부 주소           | 서비스                |
 | -------------------------------------- | ------------------- | --------------------- |
@@ -129,53 +165,39 @@ https://mgmt.*:443    ──────────►       │           ─�
 | `https://mgmt.container-wave.com`      | 192.168.200.2:80    | Grafana               |
 
 
-#### 2.5 구현 상세 관련 블로그 포스트
+#### 2.4 구현 상세 관련 블로그 포스트
 
 - [Nginx Reverse Proxy 설정](https://engineer-diarybook.tistory.com/entry/Nginx-Reverse-Proxy-%EC%84%A4%EC%A0%95-1)
 
 
+### 3. VM Provisioning Automation (Vagrant + Shell Script)
 
+#### 3.1 목적
 
+`vagrant up` 단일 명령으로 10대 VM 생성부터 K8s 클러스터 구성까지 전체 인프라를 자동 배포
 
-## 핵심 설계 포인트
+#### 3.2 해결 방안
 
+**Vagrantfile + 역할별 Shell Script로 재현 가능한 인프라 자동 구성**
 
-### 1. 하이브리드 아키텍처 (On-Premise + Cloud)
-- OCI Free Tier를 활용한 외부 접근 게이트웨이
-- OpenVPN 터널로 홈 네트워크 직접 노출 없이 안전한 접근
-- Let's Encrypt SSL/TLS로 HTTPS 통신 암호화
+- Vagrantfile에서 VM 사양, 네트워크, 프로비저닝 스크립트를 선언적으로 정의
+- 역할별 Shell Script 분리로 관심사 분리 (init_cfg / cilium-ctr / cilium-w / cilium-r / ceph)
+- 버전 정보를 변수화(K8SV, CONTAINERDV, CILIUMV)하여 업그레이드 시 변수만 수정
+- Linked Clone 방식으로 Base Image를 공유하여 디스크 사용량 절감
 
-### 2. Multi-Subnet 네트워크
-- 실무 환경과 유사한 네트워크 분리 구현
-- Router 노드를 통한 서브넷 간 통신
-- Cilium Native Routing 모드 적용
+```
+vagrant up
+  │
+  ├─► cilium-ctr ─► init_cfg.sh ─► cilium-ctr.sh ─► net-setting-01.sh
+  ├─► cilium-r   ─► cilium-r.sh
+  ├─► cilium-w1  ─► init_cfg.sh ─► cilium-w.sh   ─► net-setting-01.sh
+  ├─► cilium-w2  ─► init_cfg.sh ─► cilium-w.sh   ─► net-setting-01.sh
+  ├─► cilium-w3  ─► init_cfg.sh ─► cilium-w.sh   ─► net-setting-02.sh
+  ├─► ceph-01    ─► ceph.sh
+  ├─► ceph-02    ─► ceph.sh
+  └─► ceph-03    ─► ceph.sh
+```
 
-### 3. 스토리지 네트워크 분리
-- Public Network (192.168.50.x): 클라이언트 접근
-- Cluster Network (192.168.60.x): OSD 간 복제 트래픽
+#### 3.3 구현 상세 관련 블로그 포스트
 
-### 4. IaC 기반 자동화
-- `vagrant up` 단일 명령으로 전체 환경 구성
-- 재현 가능한 인프라 환경
-
-## 외부 서비스 접근
-
-| 서비스      | URL                                  | 용도                |
-| ----------- | ------------------------------------ | ------------------- |
-| Sample App  | https://www.container-wave.com       | 샘플 애플리케이션   |
-| Code Server | https://vscode.container-wave.com    | Web IDE             |
-| ArgoCD      | https://cicd.container-wave.com      | GitOps 대시보드     |
-| Jenkins     | https://cicd.container-wave.com:8080 | CI 파이프라인       |
-| Nexus       | https://cicd.container-wave.com:8081 | Artifact Repository |
-| Grafana     | https://mgmt.container-wave.com      | 모니터링 대시보드   |
-
-## 문서 구성
-
-- [hardware-spec.md](./hardware-spec.md) - 하드웨어 사양 및 선정 기준
-- [network-topology.md](./network-topology.md) - 네트워크 토폴로지 상세
-- [external-access.md](./external-access.md) - 외부 접근 아키텍처 (OCI + VPN)
-- [vagrant/README.md](./vagrant/README.md) - Vagrant 프로비저닝 가이드
-
-
-
-- [Private Container Image Registry (Nexus) 구축](https://engineer-diarybook.tistory.com/entry/Docker-Container-Image-Registry-%EA%B5%AC%EC%B6%95-Nexus)
+- [Vagrant 프로비저닝 가이드](./vagrant/README.md)
